@@ -165,9 +165,8 @@ Example event:
 1. journalctl -u sshd --since '2026-10-24 22:20:00' --until '2026-10-24 22:35:00' | grep -E 'Failed|Accepted|Invalid'
 2. grep '192.168.0.3' /var/log/auth.log* 2>/dev/null || journalctl -u sshd | grep '192.168.0.3'
 3. lastb | grep '192.168.0.3'
-4. wazuh-control get alerts | grep '192.168.0.3'
-5. netstat -tnp 2>/dev/null | grep ':22' | grep '192.168.0.3'
-6. ps aux | grep -E 'ssh|brute|hydra|medusa' | grep -v grep
+4. netstat -tnp 2>/dev/null | grep ':22' | grep '192.168.0.3'
+5. ps aux | grep -E 'ssh|brute|hydra|medusa' | grep -v grep
 ```
 
 The workflow can transform the raw event into a structured SOC notification containing:
