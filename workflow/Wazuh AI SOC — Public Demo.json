@@ -1,0 +1,394 @@
+{
+  "name": "Wazuh AI SOC — Public Demo",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "wazuh-alert",
+        "options": {}
+      },
+      "id": "5a962c4d-c9ca-401a-b189-a2382b0ff214",
+      "name": "Wazuh Alert Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        176,
+        1216
+      ],
+      "webhookId": "ea85fe00-dabd-4973-ae47-bef38b6c8926"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "cfg-min-level",
+              "name": "minAlertLevel",
+              "value": 9,
+              "type": "number"
+            },
+            {
+              "id": "cfg-critical-level",
+              "name": "criticalLevel",
+              "value": 12,
+              "type": "number"
+            },
+            {
+              "id": "cfg-timezone",
+              "name": "timezone",
+              "value": "Europe/Moscow",
+              "type": "string"
+            },
+            {
+              "id": "cfg-model",
+              "name": "aiModel",
+              "value": "nvidia/nemotron-3-ultra:free",
+              "type": "string"
+            },
+            {
+              "id": "cfg-tg-token",
+              "name": "telegramBotToken",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "cfg-tg-chat",
+              "name": "telegramChatId",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d32dc667-89fa-4461-b49c-8cb69b6262dd",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        512,
+        1216
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "096c8e1c-3545-43e5-94bd-f619434562c7",
+      "name": "Stop - Below Threshold",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        608,
+        1376
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Wazuh Alert Webhook\n\n### 🇷🇺 Русский\n\n**Назначение**\n\nЭтот node является точкой входа workflow. Он принимает `HTTP POST` запросы с JSON-alerts от **Wazuh Manager** и передаёт их в следующий этап обработки.\n\n**Что происходит**\n\n1. Wazuh Manager обнаруживает событие.\n2. Wazuh отправляет JSON alert на Production Webhook URL.\n3. n8n принимает alert.\n4. Alert передаётся в `Config` и далее в `Severity Threshold`.\n\n**Настройка**\n\n- **HTTP Method:** `POST`\n- **Authentication:** `None`\n- **Respond:** `Immediately`\n- **Path:** генерируется n8n автоматически.\n\nПосле активации workflow используйте **Production URL** этого webhook в конфигурации Wazuh.\n\n\n\n---\n\n\n\n\n\n\n\n\n\n\n\n### 🇬🇧 English\n\n**Purpose**\n\nThis node is the entry point of the workflow. It receives `HTTP POST` requests containing JSON alerts from **Wazuh Manager** and passes them to the next processing stage.\n\n**How it works**\n\n1. Wazuh Manager detects an event.\n2. Wazuh sends the JSON alert to the Production Webhook URL.\n3. n8n receives the alert.\n4. The alert is passed to `Config` and then to `Severity Threshold`.\n\n**Configuration**\n\n- **HTTP Method:** `POST`\n- **Authentication:** `None`\n- **Respond:** `Immediately`\n- **Path:** generated automatically by n8n.\n\nAfter activating the workflow, use the **Production URL** of this webhook in the Wazuh configuration.\n\n",
+        "height": 1200,
+        "width": 448
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -16,
+        704
+      ],
+      "typeVersion": 1,
+      "id": "32632702-fe16-46e5-b86b-c0281f2d3230",
+      "name": "Sticky - Webhook"
+    },
+    {
+      "parameters": {
+        "content": "## Configuration & Qualification\n\n### 🇷🇺 Русский\n\nЭтот блок содержит основные параметры workflow и выполняет первичную фильтрацию Wazuh alerts перед AI-анализом.\n\n### ⚙️ Configuration\n\nНастройки находятся в node **`Config`**.\n\n**`minAlertLevel`**  \nМинимальный уровень Wazuh alert, который будет передан дальше на обработку.\n\nПо умолчанию:\n\n`9`\n\nAlerts с уровнем ниже этого значения не отправляются на AI-анализ.\n\n**`criticalLevel`**  \nУровень, начиная с которого alert считается критическим для дальнейшего форматирования уведомления.\n\nПо умолчанию:\n\n`12`\n\n**`timezone`**  \nIANA timezone, используемый для отображения времени события.\n\nПример:\n\n`UTC`\n\nМожно заменить на:\n\n`Europe/Amsterdam`\n\n`Europe/Moscow`\n\n`America/New_York`\n\n**`aiModel`**  \nИдентификатор модели, используемой для AI-анализа через OpenRouter.\n\nПример:\n\n`nvidia/nemotron-3-ultra-550b-a55b:free`\n\n> 💡 Если вы меняете модель, убедитесь, что выбранная модель поддерживает используемый формат запроса и возвращает корректный JSON.\n\n### 🔎 Severity Threshold\n\nNode **`Severity Threshold`** сравнивает уровень Wazuh alert с `minAlertLevel`.\n\nУсловие:\n\n`alert.rule.level >= minAlertLevel`\n\nЕсли условие выполняется, alert передаётся дальше в **`Normalize & Extract Alert`**.\n\nЕсли уровень ниже порога, workflow останавливает обработку через **`Stop - Below Threshold`**.\n\nЭто позволяет отсеивать менее значимые события до обращения к LLM и снижать ненужную нагрузку и расход AI-ресурсов.\n\n---\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n### 🇬🇧 English\n\nThis block contains the main workflow configuration and performs the initial filtering of Wazuh alerts before AI analysis.\n\n### ⚙️ Configuration\n\nConfiguration is stored in the **`Config`** node.\n\n**`minAlertLevel`**  \nMinimum Wazuh alert level allowed to continue through the workflow.\n\nDefault:\n\n`9`\n\nAlerts below this level are not sent for AI analysis.\n\n**`criticalLevel`**  \nAlert level at which an event is considered critical for subsequent notification formatting.\n\nDefault:\n\n`12`\n\n**`timezone`**  \nIANA timezone used when displaying the event timestamp.\n\nExample:\n\n`UTC`\n\nIt can be changed to:\n\n`Europe/Amsterdam`\n\n`Europe/Moscow`\n\n`America/New_York`\n\n**`aiModel`**  \nModel identifier used for AI analysis through OpenRouter.\n\nExample:\n\n`nvidia/nemotron-3-ultra-550b-a55b:free`\n\n> 💡 If you change the model, make sure it supports the request format used by this workflow and returns valid JSON.\n\n### 🔎 Severity Threshold\n\nThe **`Severity Threshold`** node compares the Wazuh alert level with `minAlertLevel`.\n\nCondition:\n\n`alert.rule.level >= minAlertLevel`\n\nIf the condition is true, the alert continues to **`Normalize & Extract Alert`**.\n\nIf the alert level is below the threshold, processing stops at **`Stop - Below Threshold`**.\n\nThis prevents low-priority events from reaching the LLM and helps reduce unnecessary AI processing and resource usage.\n\n",
+        "height": 2496,
+        "width": 464
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        432,
+        16
+      ],
+      "typeVersion": 1,
+      "id": "374de566-624c-4ffd-ba07-a5674eff2121",
+      "name": "Sticky - Config"
+    },
+    {
+      "parameters": {
+        "content": "## [ Normalize & Extract Alert ] → [ AI SOC Analysis ]\n\n### 🇷🇺 Русский\n\nЭтот блок подготавливает Wazuh alert к AI-анализу.\n\n### `Normalize & Extract Alert`\n\nJavaScript node извлекает основные данные из входящего Wazuh alert:\n\n- уровень события;\n- Rule ID;\n- описание правила;\n- hostname / имя агента;\n- IP-адрес агента;\n- source IP;\n- пользователей;\n- команду;\n- группы правила;\n- location / log source;\n- timestamp.\n\nЗначения нормализуются, чтобы отсутствующие поля не приводили к ошибкам во время дальнейшей обработки.\n\nNode также определяет, является ли событие критическим:\n\n`level >= criticalLevel`\n\n### Infrastructure Context\n\nПеред отправкой события в AI можно добавить описание вашей инфраструктуры.\n\nКонтекст может содержать:\n\n- назначение серверов;\n- важные сервисы;\n- нормальные административные операции;\n- особенности сетевой инфраструктуры;\n- VPN / proxy;\n- ожидаемые способы аутентификации;\n- другие особенности вашей среды.\n\nЧем точнее описана инфраструктура, тем полезнее AI-анализ.\n\n**Не добавляйте в этот блок:**\n\n- API keys;\n- passwords;\n- Telegram tokens;\n- private credentials;\n- другие secrets.\n\n### AI Request\n\nПосле извлечения данных node формирует единый JSON request для AI-модели.\n\nЗапрос содержит:\n\n- выбранную AI model;\n- system prompt;\n- Wazuh alert;\n- infrastructure context;\n- формат ожидаемого JSON-ответа.\n\nСледующий node `AI SOC Analysis` отправляет этот request в OpenRouter.\n\n---\n\n\n\n\n\n\n\n\n\n\n\n\n\n### 🇬🇧 English\n\nThis block prepares the Wazuh alert for AI analysis.\n\n### `Normalize & Extract Alert`\n\nThe JavaScript node extracts the main fields from the incoming Wazuh alert:\n\n- event level;\n- Rule ID;\n- rule description;\n- hostname / agent name;\n- agent IP address;\n- source IP;\n- users;\n- command;\n- rule groups;\n- log location;\n- timestamp.\n\nMissing values are normalized so that incomplete Wazuh events do not break the following processing steps.\n\nThe node also determines whether the event is considered critical:\n\n`level >= criticalLevel`\n\n### Infrastructure Context\n\nBefore sending the event to the AI model, you can provide additional context about your infrastructure.\n\nThe context may include:\n\n- server roles;\n- important services;\n- normal administrative activity;\n- network architecture;\n- VPN / proxy usage;\n- expected authentication patterns;\n- other environment-specific information.\n\nThe more accurate the infrastructure context, the more useful the AI analysis can be.\n\n**Do not add:**\n\n- API keys;\n- passwords;\n- Telegram tokens;\n- private credentials;\n- other secrets.\n\n### AI Request\n\nAfter extracting and normalizing the alert, the node builds a single JSON request for the AI model.\n\nThe request contains:\n\n- the selected AI model;\n- the system prompt;\n- the Wazuh alert;\n- infrastructure context;\n- the expected JSON response schema.\n\nThe next node, `AI SOC Analysis`, sends this request to OpenRouter.",
+        "height": 2640,
+        "width": 480
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        896,
+        -96
+      ],
+      "typeVersion": 1,
+      "id": "1de6ce07-6ba6-4240-9eee-7dcfdc21980c",
+      "name": "Sticky - Extract Analyze"
+    },
+    {
+      "parameters": {
+        "content": "## Format & Notify\n \n🇷🇺 Форматирование и уведомление\n\nЭтот блок преобразует структурированный ответ AI в читаемое SOC-уведомление и отправляет его в Telegram.\n\n**Format SOC Alert**\n- Получает JSON-ответ от AI-анализа.\n- Проверяет и безопасно разбирает ответ модели.\n- Извлекает уровень риска, предполагаемую причину, рекомендации и команды для расследования.\n- Формирует единое HTML-сообщение для Telegram.\n- Если AI вернул некорректный JSON, используется безопасный fallback вместо остановки workflow.\n\n**Telegram SOC Notification**\n- Отправляет сформированное SOC-сообщение в указанный Telegram chat.\n- Telegram Bot Token и Chat ID не хранятся непосредственно в этой ноде.\n- Эти параметры берутся из ноды `Config`.\n\n> 🔐 Перед публикацией workflow убедитесь, что в `Config` отсутствуют реальные API keys, Telegram Bot Tokens, Chat IDs или другие чувствительные данные.\n\n---\n\n\n\n\n\n\n\n\n\n\n\n\n\n## 🇬🇧 Formatting & Notification\n\nThis block converts the structured AI analysis into a readable SOC notification and sends it to Telegram.\n\n**Format SOC Alert**\n- Receives the JSON response from the AI analysis.\n- Safely parses and validates the model response.\n- Extracts the risk level, likely cause, recommended actions, and investigation commands.\n- Builds a single HTML-formatted Telegram message.\n- If the AI returns invalid JSON, a safe fallback response is used instead of stopping the workflow.\n\n**Telegram SOC Notification**\n- Sends the generated SOC message to the configured Telegram chat.\n- The Telegram Bot Token and Chat ID are not stored directly in this node.\n- These values are read from the `Config` node.\n\n> 🔐 Before publishing the workflow, make sure that `Config` contains no real API keys, Telegram Bot Tokens, Chat IDs, or other sensitive information.",
+        "height": 1200,
+        "width": 480
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1376,
+        624
+      ],
+      "typeVersion": 1,
+      "id": "52fdf643-9968-4ada-b26f-fcdd50ae4ab0",
+      "name": "Sticky - Format Notify"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-min-level",
+              "leftValue": "={{ $('Wazuh Alert Webhook').first().json.body.rule.level }}",
+              "rightValue": "={{ $json.minAlertLevel }}",
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "cf556c0d-5ee2-4914-871a-edd3d718b558",
+      "name": "Severity Threshold",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        656,
+        1216
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst alert = $('Wazuh Alert Webhook').first().json.body;\n\n// ============================================================\n// Core Wazuh alert fields\n// ============================================================\n\nconst level = parseInt(alert?.rule?.level ?? 0, 10);\nconst description = alert?.rule?.description ?? 'Unknown rule';\n\nconst agentName = alert?.agent?.name ?? 'unknown';\nconst agentIp = alert?.agent?.ip ?? 'N/A';\n\nconst srcIp = alert?.data?.srcip ?? null;\nconst dstUser = alert?.data?.dstuser ?? null;\nconst srcUser = alert?.data?.srcuser ?? null;\nconst command = alert?.data?.command ?? null;\n\nconst groups = Array.isArray(alert?.rule?.groups)\n  ? alert.rule.groups.join(', ')\n  : (alert?.rule?.groups ?? 'N/A');\n\nconst ruleId = alert?.rule?.id ?? 'N/A';\nconst location = alert?.location ?? 'N/A';\n\n\n// ============================================================\n// Timestamp\n// ============================================================\n\nconst rawTs = alert?.timestamp ?? new Date().toISOString();\n\nconst tz = item.timezone ?? 'UTC';\n\nconst ts = new Date(rawTs).toLocaleString('en-US', {\n  timeZone: tz,\n  hour12: false,\n});\n\n\n// ============================================================\n// Severity classification\n// ============================================================\n\nconst criticalLevel = Number(item.criticalLevel ?? 12);\n\nconst isCritical = level >= criticalLevel;\n\n\n// ============================================================\n// CUSTOMIZE ME\n// Infrastructure context\n//\n// Replace this example with information about YOUR environment.\n// Do not include passwords, API keys, tokens, or other secrets.\n//\n// The more specific the context, the more useful the AI analysis\n// can become.\n//\n// Example topics:\n// - server roles\n// - important services\n// - normal authentication patterns\n// - network architecture\n// - VPN / proxy usage\n// - expected administrative activity\n// - monitoring configuration\n// ============================================================\n\nconst infraContext = `\nInfrastructure context:\n\nReplace this section with a description of your environment.\n\nExample:\n- Linux servers monitored by Wazuh\n- Internal authentication services\n- Web and database servers\n- VPN used for administrative access\n- n8n used for security automation\n- Active response disabled; monitoring and notification only\n\nDo not include secrets or sensitive credentials in this section.\n`;\n\n\n// ============================================================\n// AI prompts\n// ============================================================\n\nconst systemPrompt = `\nYou are an AI security analyst reviewing a Wazuh SIEM alert.\n\nAnalyze the alert using the available event data and the provided\ninfrastructure context.\n\nDo not invent facts that are not present in the alert or context.\n\n${infraContext}\n\nReturn ONLY a valid JSON object.\n\nRequired schema:\n\n{\n  \"risk_level\": \"critical|high|medium|low|unknown\",\n  \"likely_cause\": \"string\",\n  \"is_likely_false_positive\": true,\n  \"fp_reason\": \"string\",\n  \"recommended_action\": [\"string\"],\n  \"investigate_commands\": [\"string\"]\n}\n\nRules:\n\n1. Write human-readable explanations in Russian.\n2. Keep risk_level within the allowed values.\n3. likely_cause must briefly explain the most likely cause.\n4. fp_reason must explain why the event may be a false positive.\n5. recommended_action must contain concrete investigation or response steps.\n6. investigate_commands must contain real Linux/Wazuh commands when appropriate.\n7. Do not invent facts.\n8. Consider hostname, IP address, username, rule ID, severity,\n   command, authentication details and other available fields.\n9. Do not classify an event as a false positive only because it\n   appears to be a normal administrative operation.\n10. If there is not enough information, use a cautious risk level\n    and explain the uncertainty.\n11. Do not return Markdown.\n12. Do not wrap the JSON in code fences.\n13. Return JSON only.\n`;\n\nconst userPrompt = `\nAnalyze this Wazuh alert.\n\nHost: ${agentName} (${agentIp})\nRule ID: ${ruleId}\nLevel: ${level}\nDescription: ${description}\nGroups: ${groups}\nSource IP: ${srcIp ?? 'N/A'}\nDestination User: ${dstUser ?? 'N/A'}\nSource User: ${srcUser ?? 'N/A'}\nCommand: ${command ?? 'N/A'}\nLocation: ${location}\nTimestamp: ${ts}\n\nFull Wazuh alert JSON:\n\n${JSON.stringify(alert, null, 2)}\n`;\n\n\n// ============================================================\n// AI request body\n// ============================================================\n\nconst aiBodyObj = {\n  model: item.aiModel ?? 'nvidia/nemotron-3-ultra-550b-a55b:free',\n  max_tokens: 1600,\n  temperature: 0.2,\n  messages: [\n    {\n      role: 'system',\n      content: systemPrompt,\n    },\n    {\n      role: 'user',\n      content: userPrompt,\n    },\n  ],\n};\n\n\n// ============================================================\n// Output\n// ============================================================\n\nreturn [\n  {\n    json: {\n      // Configuration\n      minAlertLevel: item.minAlertLevel,\n      criticalLevel,\n      timezone: item.timezone,\n      aiModel: item.AiModel,\n\n      // Alert fields\n      level,\n      description,\n      agentName,\n      agentIp,\n      srcIp,\n      dstUser,\n      srcUser,\n      command,\n      groups,\n      ruleId,\n      location,\n      ts,\n      isCritical,\n\n      // Prepared AI request\n      aiBodyObj,\n    },\n  },\n];"
+      },
+      "id": "068f8af6-f4fe-4eb5-bcf4-68e15fe10b0e",
+      "name": "Normalize & Extract Alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        992,
+        1168
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openRouterApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": []
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\nJSON.stringify({\n  model: $json.aiModel ?? \"nvidia/nemotron-3-ultra-550b-a55b:free\",\n  max_tokens: 1600,\n  temperature: 0.2,\n  messages: [\n    {\n      role: \"system\",\n      content: `\nТы — AI-аналитик безопасности Wazuh.\n\nПроанализируй поступивший Wazuh alert и верни результат СТРОГО в формате JSON.\n\nИспользуй ТОЛЬКО эту структуру:\n\n{\n  \"risk_level\": \"critical|high|medium|low|unknown\",\n  \"likely_cause\": \"string\",\n  \"is_likely_false_positive\": true,\n  \"fp_reason\": \"string\",\n  \"recommended_action\": [\"string\"],\n  \"investigate_commands\": [\"string\"]\n}\n\nПравила:\n\n1. Все объяснения для человека пиши НА РУССКОМ языке.\n2. Поля risk_level и is_likely_false_positive должны иметь именно указанные значения.\n3. likely_cause — кратко объясни вероятную причину события на русском.\n4. fp_reason — объясни на русском, почему событие может быть ложным срабатыванием.\n5. recommended_action — конкретные рекомендации по дальнейшим действиям на русском.\n6. investigate_commands — реальные команды Linux/Wazuh для расследования. Команды НЕ переводить.\n7. Не выдумывай факты, которых нет в alert.\n8. Учитывай IP, пользователя, hostname, rule ID, уровень Wazuh, способ аутентификации и другие доступные поля.\n9. Не считай событие ложным срабатыванием только потому, что оно выглядит как обычная административная операция.\n10. Если недостаточно данных для уверенного вывода, используй risk_level \"unknown\" или соответствующий осторожный уровень риска.\n11. Не добавляй Markdown.\n12. Не добавляй \\`\\`\\`json.\n13. Не добавляй пояснения до или после JSON.\n14. Верни только валидный JSON.\n`\n    },\n    {\n      role: \"user\",\n      content: `\nПроанализируй следующий Wazuh alert.\n\nWazuh alert:\n${JSON.stringify({\n  level: $json.level,\n  description: $json.description,\n  agentName: $json.agentName,\n  agentIp: $json.agentIp,\n  srcIp: $json.srcIp,\n  dstUser: $json.dstUser,\n  srcUser: $json.srcUser,\n  command: $json.command,\n  groups: $json.groups,\n  ruleId: $json.ruleId,\n  location: $json.location,\n  timestamp: $json.ts,\n  isCritical: $json.isCritical\n}, null, 2)}\n\nИнфраструктурный контекст:\nНеизвестен. Анализируй событие только на основании предоставленных данных.\n\nВерни только валидный JSON согласно структуре из system prompt.\n`\n    }\n  ]\n})\n}}",
+        "options": {}
+      },
+      "id": "430e2695-6c5d-4bd7-8c72-7483367a1743",
+      "name": "AI SOC Analysis",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1168,
+        1168
+      ],
+      "credentials": {
+        "openRouterApi": {
+          "id": "nVAqUd1FSiRt8jbK",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const llmResponse = $input.first().json;\nconst alert = $('Normalize & Extract Alert').item.json;\n\n// Получаем ответ модели\nconst rawText =\n  llmResponse.content?.[0]?.text ??\n  llmResponse.choices?.[0]?.message?.content ??\n  llmResponse.message?.content ??\n  '{}';\n\n// Парсим JSON от LLM\nlet analysis = {};\n\ntry {\n  let cleaned = rawText\n    .replace(/^```json\\s*/i, '')\n    .replace(/^```\\s*/i, '')\n    .replace(/\\s*```$/i, '')\n    .trim();\n\n  analysis = JSON.parse(cleaned);\n} catch (e) {\n  analysis = {\n    risk_level: 'unknown',\n    likely_cause: 'AI-анализ не удалось разобрать.',\n    is_likely_false_positive: false,\n    fp_reason: '',\n    recommended_action: [],\n    investigate_commands: []\n  };\n}\n\n// Безопасный HTML\nfunction esc(value) {\n  return String(value ?? '')\n    .replace(/&/g, '&amp;')\n    .replace(/</g, '&lt;')\n    .replace(/>/g, '&gt;');\n}\n\nconst level = alert.level ?? 0;\nconst risk = String(analysis.risk_level ?? 'unknown').toLowerCase();\n\nconst riskEmoji = {\n  critical: '🔴',\n  high: '🟠',\n  medium: '🟡',\n  low: '🟢',\n  unknown: '⚪'\n}[risk] ?? '⚪';\n\nconst riskLabel = {\n  critical: 'КРИТИЧЕСКИЙ',\n  high: 'ВЫСОКИЙ',\n  medium: 'СРЕДНИЙ',\n  low: 'НИЗКИЙ',\n  unknown: 'НЕИЗВЕСТНО'\n}[risk] ?? 'НЕИЗВЕСТНО';\n\nconst lines = [];\n\nlines.push(`🚨 <b>Анализ события Wazuh</b>`);\nlines.push('');\n\nlines.push(`<b>Уровень Wazuh:</b> ${esc(level)}`);\nlines.push(`<b>Риск:</b> ${riskEmoji} ${riskLabel}`);\nlines.push('');\n\nlines.push(`🖥 <b>Хост:</b> ${esc(alert.agentName)}`);\nlines.push(`📍 <b>IP хоста:</b> ${esc(alert.agentIp)}`);\nlines.push(`🌐 <b>IP источника:</b> ${esc(alert.srcIp ?? 'неизвестно')}`);\nlines.push(`📋 <b>Rule ID:</b> ${esc(alert.ruleId)}`);\nlines.push(`📝 <b>Событие:</b> ${esc(alert.description)}`);\nlines.push(`🕒 <b>Время:</b> ${esc(alert.ts)}`);\nlines.push('');\n\nlines.push(`🔎 <b>Предполагаемая причина:</b>`);\nlines.push(esc(analysis.likely_cause ?? 'Нет данных'));\nlines.push('');\n\nlines.push(\n  `⚠️ <b>Ложное срабатывание:</b> ${\n    analysis.is_likely_false_positive ? 'Да' : 'Нет — требует внимания'\n  }`\n);\n\nif (analysis.fp_reason) {\n  lines.push('');\n  lines.push(`💡 <b>Почему:</b>`);\n  lines.push(esc(analysis.fp_reason));\n}\n\nif (\n  Array.isArray(analysis.recommended_action) &&\n  analysis.recommended_action.length\n) {\n  lines.push('');\n  lines.push(`🛠 <b>Рекомендуемые действия:</b>`);\n\n  analysis.recommended_action.forEach((action, index) => {\n    lines.push(`${index + 1}. ${esc(action)}`);\n  });\n}\n\nif (\n  Array.isArray(analysis.investigate_commands) &&\n  analysis.investigate_commands.length\n) {\n  lines.push('');\n  lines.push(`🔧 <b>Команды для расследования:</b>`);\n  lines.push('<pre>');\n\n  analysis.investigate_commands.forEach((cmd, index) => {\n    lines.push(`${index + 1}. ${esc(cmd)}`);\n  });\n\n  lines.push('</pre>');\n}\n\nconst telegramMessage = lines.join('\\n');\n\nreturn [\n  {\n    json: {\n      telegramMessage,\n      level: alert.level,\n      description: alert.description,\n      agentName: alert.agentName,\n      agentIp: alert.agentIp,\n      srcIp: alert.srcIp,\n      ruleId: alert.ruleId,\n      riskLevel: analysis.risk_level\n    }\n  }\n];"
+      },
+      "id": "9cf7f4ac-b999-40ce-b014-d49888a091ac",
+      "name": "Format SOC Alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1488,
+        1152
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{ $('Config').item.json.telegramBotToken }}/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  chat_id: $('Config').item.json.telegramChatId,\n  text: $json.telegramMessage,\n  parse_mode: 'HTML'\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1696,
+        1152
+      ],
+      "id": "e8e9de66-4384-4bb6-a74a-1ffb46c93280",
+      "name": "Telegram SOC Notification"
+    },
+    {
+      "parameters": {
+        "content": "# Wazuh → AI SOC Analysis → Telegram\n\nThis workflow receives security alerts from **Wazuh**, filters them by severity, normalizes the alert data, sends the event to an AI model for SOC analysis, formats the result, and delivers the final security notification to **Telegram**.\n\n### Workflow flow\n\n**1. Wazuh Alert Webhook**  \nReceives Wazuh alerts through an HTTP POST webhook.\n\n**2. Configuration & Qualification**\n- `Config` stores workflow configuration and credentials.\n- `Severity Threshold` checks the Wazuh rule level against `minAlertLevel`.\n- Alerts below the configured threshold are stopped and do not continue through the analysis pipeline.\n\n**3. Extract & Analyze**\n- `Normalize & Extract Alert` extracts the important fields from the Wazuh event.\n- Alert information includes rule level, rule ID, description, agent/host, IP addresses, users, command, groups, log location, and timestamp.\n- The node also builds the AI analysis request and includes infrastructure context.\n- `AI SOC Analysis` sends the prepared security event to the configured AI model and requires a structured JSON response.\n\n### AI analysis\n\nThe AI returns:\n- risk level\n- likely cause\n- false-positive assessment\n- false-positive reasoning\n- recommended actions\n- investigation commands\n\nThe AI is instructed to respond with valid JSON only and to provide human-readable explanations in Russian.\n\n### Notification\n\n**Format SOC Alert**\n- Parses the AI response.\n- Handles malformed AI output safely.\n- Converts the analysis into a readable Telegram message.\n- Adds Wazuh severity, risk level, host information, source IP, rule ID, event description, timestamp, recommended actions, and investigation commands.\n\n**Telegram SOC Notification**\n- Sends the formatted alert to the configured Telegram chat.\n- Uses Telegram HTML formatting for readable SOC notifications.\n\n### Configuration\n\nThe workflow currently uses configurable values for:\n- minimum alert severity\n- critical severity threshold\n- timezone\n- AI model\n- Telegram Bot Token\n- Telegram Chat ID\n\nThe overall purpose is to reduce noise from low-severity Wazuh events and provide a concise AI-assisted SOC assessment and actionable investigation guidance through Telegram.",
+        "height": 1120,
+        "width": 1120
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1024,
+        -656
+      ],
+      "id": "6ce41b15-7ac1-4824-83ad-5ec82be8b90b",
+      "name": "Sticky Note"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Wazuh Alert Webhook": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Severity Threshold",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Severity Threshold": {
+      "main": [
+        [
+          {
+            "node": "Normalize & Extract Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Stop - Below Threshold",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize & Extract Alert": {
+      "main": [
+        [
+          {
+            "node": "AI SOC Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI SOC Analysis": {
+      "main": [
+        [
+          {
+            "node": "Format SOC Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format SOC Alert": {
+      "main": [
+        [
+          {
+            "node": "Telegram SOC Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true
+  },
+  "versionId": "f8e1de88-bdec-4753-a561-c68f3db582e5",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "854df424bdae60e2c2ec16e4cf9c7954eddb283725ee75e5b16e4db6d56a8cae"
+  },
+  "nodeGroups": [],
+  "id": "wfD0sG98WGuWV7iY",
+  "tags": [
+    {
+      "updatedAt": "2026-10-18T10:45:38.181Z",
+      "createdAt": "2026-10-18T10:45:38.181Z",
+      "id": "8ujl5rzdy5DK5jYM",
+      "name": "monitoring"
+    },
+    {
+      "updatedAt": "2026-10-18T10:45:38.171Z",
+      "createdAt": "2026-10-18T10:45:38.171Z",
+      "id": "SFO1cgwHGFGAl61v",
+      "name": "wazuh"
+    },
+    {
+      "updatedAt": "2026-10-18T10:45:38.186Z",
+      "createdAt": "2026-10-18T10:45:38.186Z",
+      "id": "hDwyaiGu3vVwLFan",
+      "name": "template"
+    },
+    {
+      "updatedAt": "2026-10-18T10:45:38.176Z",
+      "createdAt": "2026-10-18T10:45:38.176Z",
+      "id": "wvwEptd2wwV2e5qg",
+      "name": "ai"
+    },
+    {
+      "updatedAt": "2026-10-18T10:45:38.159Z",
+      "createdAt": "2026-10-18T10:45:38.159Z",
+      "id": "yzqmHuWkO4OLO7ei",
+      "name": "security"
+    }
+  ]
+}
